@@ -1,0 +1,304 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{% block title %}Social Network{% endblock %}</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <link href="{% static 'network/styles.css' %}" rel="stylesheet">
+        <script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+        <script type="text/babel">
+            const save = post => {
+                const postContainer = document.querySelector(`#post${post.id}`);
+                postContainer.querySelector(".edit-link").style.visibility = "visible";
+                const postContent = postContainer.querySelector(".post-content");
+                const content = postContent.querySelector("#post-edit-text").value;
+
+                // send post request
+                fetch(`/edit/${post.id}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": document.getElementsByName("csrfmiddlewaretoken")[0].value
+                    },
+                    body: JSON.stringify({
+                        "content": content
+                    })
+                })
+                .catch(error => {
+                    console.log(`Error: ${error}`);
+                });
+
+                // add updated text
+                postContent.innerHTML = `
+                    <p>${content}</p>
+                `;
+            };
+
+            const edit = post => {
+                const postContainer = document.querySelector(`#post${post.id}`);
+                postContainer.querySelector(".edit-link").style.visibility = "hidden";
+                const postContent = postContainer.querySelector(".post-content");
+
+                // remove innerHTML & add textarea
+                postContent.innerHTML = `
+                    {% csrf_token %}
+                    <textarea 
+                        id="post-edit-text" 
+                        rows="3" 
+                        cols="40" 
+                        class="form-control"
+                        style="text-align: left !important;" 
+                    >${postContent.innerText.trim()}</textarea>
+                    <button 
+                        class="btn btn-primary mt-2"
+                        onclick='save(${JSON.stringify(post)})'
+                    >Save</button>
+                `;
+            };
+
+            const dislike = post => {
+                const postContainer = document.querySelector(`#post${post.id}`);
+
+                // make post request
+                fetch(`/dislike/${post.id}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": document.getElementsByName("csrfmiddlewaretoken")[0].value
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    // update like count
+                    postContainer.querySelector("#dislike-like-count").innerHTML = result.likes;
+                    postContainer.querySelector("#like-like-count").innerHTML = result.likes;
+                })
+                .then(() => {
+                    postContainer.querySelector("#dislike-div").style.display = "block";
+                    postContainer.querySelector("#like-div").style.display = "none";
+                })
+                .catch(error => {
+                    console.log(`Error: ${error}`);
+                });
+            };
+
+            const like = post => {
+                const postContainer = document.querySelector(`#post${post.id}`);
+
+                // make post request
+                fetch(`/like/${post.id}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": document.getElementsByName("csrfmiddlewaretoken")[0].value
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    // update like count
+                    postContainer.querySelector("#dislike-like-count").innerHTML = result.likes;
+                    postContainer.querySelector("#like-like-count").innerHTML = result.likes;
+                })
+                .then(() => {
+                    postContainer.querySelector("#dislike-div").style.display = "none";
+                    postContainer.querySelector("#like-div").style.display = "block";
+                })
+                .catch(error => {
+                    console.log(`Error: ${error}`);
+                });
+            }
+
+            const Post = props => {
+                const isLiked = props.likedPosts.includes(props.post.id);
+
+                return (
+                    <div className="post-container" id={"post" + props.post.id}>
+                        <div>
+                            <h3 className="post-header">{props.post.user}</h3>
+                            <br />
+                            <br />
+                            <a
+                                onClick={() => {
+                                    edit(props.post);
+                                }}
+                                className="edit-link"
+                                style={{ 
+                                    visibility: "{{user}}" === props.post.user ?
+                                    "visible" : "hidden",
+                                    color: "#0275d8",
+                                    textDecoration: "none",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Edit
+                            </a>
+                        </div>
+                        <div className="post-content">
+                            <p>{props.post.content}</p>
+                        </div>
+                        <div className="post-timestamp">
+                            {props.post.timestamp}
+                        </div>
+                        <div className="post-likes">
+                            <div 
+                                id="dislike-div"
+                                style={{
+                                    display: isLiked ? "none" : "block"
+                                }}
+                            >
+                                <div 
+                                    id="dislike-icon" 
+                                    onClick={() => like(props.post)}
+                                >🤍</div> 
+                                <div id="dislike-like-count">{props.post.likes}</div>
+                            </div>
+                            <div 
+                                id="like-div"
+                                style={{
+                                    display: isLiked ? "block" : "none"
+                                }}
+                            >
+                                <div 
+                                    id="like-icon"
+                                    onClick={() => dislike(props.post)}
+                                >❤️</div> 
+                                <div id="like-like-count">{props.post.likes}</div>
+                            </div>
+                        </div>
+                        <div className="post-comment">
+                            Comment    
+                        </div>
+                    </div>
+                );
+            };
+
+            const Profile = props => {
+                return (
+                    <div>
+                        <div className="profile-username">
+                            {props.username}
+                        </div>
+                        <div className="follower-div">
+                            <strong>{props.followers}</strong>
+                            {props.followers == 1 ? " Follower" : " Followers"}
+                        </div>
+                        &nbsp;&#x2022;&nbsp;
+                        <div className="following-div">
+                            <strong>{props.following}</strong> Following
+                        </div>
+                        <br />
+                    </div>
+                );
+            };
+
+            const Paginator = props => {
+                const prevPageNumber = `?page=${Math.max(parseInt(props.page.number) - 1, 1)}`;
+                const nextPageNumber = `?page=${Math.min(parseInt(props.page.number) + 1, props.page.paginator.num_pages)}`;
+                return (
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            <li
+                                className={props.page.has_previous ? "page-item" : "page-item disabled"}
+                            >
+                                <a 
+                                    className="page-link" 
+                                    href={prevPageNumber}
+                                >
+                                    Previous
+                                </a>
+                            </li>
+                            <li className="page-item active">
+                                <a className="page-link" href="">
+                                    Page {props.page.number} of {props.page.paginator.num_pages}
+                                </a>
+                            </li>
+                            <li 
+                                className={props.page.has_next ? "page-item" : "page-item disabled"}
+                            >
+                                <a 
+                                    className="page-link" 
+                                    href={nextPageNumber}
+                                >
+                                    Next
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                )
+            };
+
+            const render = (post, likedPosts, prepend=false)  => {
+                const postContainer = document.createElement("div");
+                prepend ? 
+                document.querySelector("#posts-container").prepend(postContainer) :
+                document.querySelector("#posts-container").append(postContainer);
+                ReactDOM.render(
+                    <Post 
+                        post={post} 
+                        likedPosts={likedPosts} 
+                    />, postContainer
+                );
+    
+                // add user profile link
+                postContainer.querySelector(".post-header").addEventListener("click", () => {
+                    location.href = `/users/${post.user}`
+                })
+            };
+        </script>
+        {% block script %}
+        {% endblock %}
+        <style>
+            #dislike-div, #like-div, #dislike-like-count, #like-like-count {
+                display: inline;
+            }
+
+            #dislike-icon, #like-icon {
+                display: inline;
+                cursor: pointer;
+            }
+        </style>
+        {% block css %}{% endblock %}
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="#">Network</a>
+          
+            <div>
+              <ul class="navbar-nav mr-auto">
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'user' user %}"><strong>{{ user.username }}</strong></a>
+                    </li>
+                {% endif %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'index' %}">All Posts</a>
+                </li>
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'following' %}">Following</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Log In</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
+                {% endif %}
+              </ul>
+            </div>
+          </nav>
+        
+        <div class="body">
+            {% block body %}
+            {% endblock %}
+        </div>
+    </body>
+</html>

@@ -1,0 +1,140 @@
+{% extends "network/layout.html" %}
+
+{% block script %}
+    <script type="text/babel"> 
+        // load posts      
+        JSON.parse("{{ posts|escapejs }}").forEach(post => {
+            render(post, JSON.parse("{{ liked_posts|escapejs }}"));
+        });
+        
+        // add navigation
+        const pageNavDiv = document.createElement("div");
+        pageNavDiv.id = "page-nav-div";
+        document.querySelector("#posts-container").append(pageNavDiv);
+        ReactDOM.render(
+            <Paginator page={JSON.parse("{{ page|escapejs }}")} />, 
+            pageNavDiv
+        );
+    </script>
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // add btn event listener
+            const newPostForm = document.querySelector("#new-post-form");
+            newPostForm.onsubmit = () => {
+
+                // check if textarea has anything
+                content = document.querySelector("#content");
+                if (content.value.trim().length > 0) {
+                    newPostForm.submit();
+                } else {
+                    // clear form and stop submission
+                    content.value = "";
+                    return false;
+                }
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block css %}
+    <style>
+        @keyframes hide {
+            0% {
+                opacity: 1;
+            }
+
+            95% {
+                opacity: 0;
+                transform: rotate(360deg);
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes appear {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        #new-post-container {
+            margin: 2%;
+            border: 0.1px solid lightgrey;
+            padding: 30px;
+            animation-name: hide;
+            animation-duration: 2s;
+            animation-fill-mode: forwards;
+            animation-play-state: paused;
+        }
+
+        #new-post-form {
+            margin-top: 15px;
+        }
+
+        #new-post-btn {
+            margin-top: 5px;
+        }
+
+        .post-container {
+            margin-left: 2%;
+            margin-right: 2%;
+            margin-top: 1%;
+            margin-bottom: 1%;
+            border: 0.1px solid lightgrey;
+            padding: 30px;
+            animation-name: appear;
+            animation-duration: 2s;
+            animation-fill-mode: forwards;
+            animation-play-state: running;
+        }
+
+        .post-header {
+            font-weight: bolder;
+            cursor: pointer;
+            display: inline;
+        }
+
+        .edit-link:hover {
+            text-decoration: none;
+        }
+
+        .post-content {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .post-timestamp {
+            font-size: 18px;
+        }
+
+        .post-like {
+            font-size: 20px;
+        }
+
+        .post-comment {
+            font-weight: normal;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <h1 class="m-2">All Posts</h1>
+    <hr>
+    <div id="new-post-container">
+        <h2>New Post</h2>
+        <form method="POST" id="new-post-form" action="/post">
+            {% csrf_token %}
+            {{ newPostForm }}
+            <input type="submit" value="Post" id="new-post-btn" class="btn btn-primary">
+        </form>
+    </div>
+    <div id="posts-container">
+    </div>
+{% endblock %}
