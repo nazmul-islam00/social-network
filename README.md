@@ -1,4 +1,4 @@
-# Simple Social Network
+# Social Network
 
 A simple social network application built using Django and JavaScript. This project demonstrates the capabilities of Django for backend development and JavaScript for interactive frontend features.
 
